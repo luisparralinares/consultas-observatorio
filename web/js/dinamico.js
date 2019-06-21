@@ -126,34 +126,57 @@ $(document).ready(function(){
     $("#filtrar").click(function(){
         let filtros = {};
         let aux = {};
+        let opciones = [];
         filtros["mouv"] = {ind: []};
         filtros["cerradaLista"] = {ind: []};
         filtros["abierta"] = {ind: []};
         
         $(".mouvS").each(function(i, item){
             aux = {};
-            if($("input[type=checkbox]:checked",item).length > 0){
-                aux["descripcion"] = $(".descripcionP",$(item).parents("div.card").children("div.card-header")).text();
-                aux["opciones"] = [];
-               $("input[type=checkbox]:checked",item).each(function(x, itm){
-                    aux["opciones"].push($(itm).siblings("label").text());
-                }); 
+            
+            if($("div.opcnsC",item).length > 0){
+                aux["listas"] = [];
             }
-            if(Object.keys(aux).length > 0){
+            
+            $("div.opcnsC",item).each(function(x, itm){
+                if($("input[type=checkbox]:checked",itm).length > 0){
+                    opciones = [];
+                   $("input[type=checkbox]:checked",itm).each(function(y, im){
+                        opciones.push($(im).siblings("label").text());
+                    });
+                    if(opciones.length > 0){
+                        aux["listas"].push({opciones: opciones});
+                    }
+                }
+            });
+            
+            if(Object.keys(aux).length > 0 && aux["listas"].length > 0){
+                aux["descripcion"] = $(".descripcionP",$(item).parents("div.card").children("div.card-header")).text();
                 filtros.mouv.ind.push(aux);
             }
         });
         
         $(".crrdListaS").each(function(i, item){
             aux = {};
-            if($("input[type=checkbox]:checked",item).length > 0){
-                aux["descripcion"] = $(".descripcionP",$(item).parents("div.card").children("div.card-header")).text();
-                aux["opciones"] = [];
-               $("input[type=checkbox]:checked",item).each(function(x, itm){
-                    aux["opciones"].push($(itm).siblings("label").text());
-                }); 
+            
+            if($("div.opcnsC",item).length > 0){
+                aux["listas"] = [];
             }
-            if(Object.keys(aux).length > 0){
+            
+            $("div.opcnsC",item).each(function(x, itm){
+                if($("input[type=checkbox]:checked",itm).length > 0){
+                    opciones = [];
+                   $("input[type=checkbox]:checked",itm).each(function(y, im){
+                        opciones.push($(im).siblings("label").text());
+                    });
+                    if(opciones.length > 0){
+                        aux["listas"].push({descripcion: $("label.descripcion",itm).text(), opciones: opciones});
+                    }
+                }
+            });
+            
+            if(Object.keys(aux).length > 0 && aux["listas"].length > 0){
+                aux["descripcion"] = $(".descripcionP",$(item).parents("div.card").children("div.card-header")).text();
                 filtros.cerradaLista.ind.push(aux);
             }
         });
@@ -161,11 +184,18 @@ $(document).ready(function(){
         $(".abiertaS").each(function(i, item){
             aux = {};
             if($("input",item).length > 0){
-                aux["descripcion"] = $(".descripcionP",$(item).parents("div.card").children("div.card-header")).text();
-                aux["opciones"] = [];
-               $("input",item).each(function(x, itm){
-                    aux["opciones"].push($(itm).siblings("label").text());
-                }); 
+
+                opciones = [];
+               $("input[data-role=tagsinput]",item).each(function(x, itm){
+                    if($(itm).val() !== ""){
+                        opciones = $(itm).val().split(",");
+                    }
+                });
+                if(opciones.length > 0){
+                    aux["descripcion"] = $(".descripcionP",$(item).parents("div.card").children("div.card-header")).text();
+                    aux["abiertas"] = [];
+                    aux["abiertas"].push({opciones: opciones, descripcion: $("label.descripcion",item).text()});
+                }
             }
             if(Object.keys(aux).length > 0){
                 filtros.abierta.ind.push(aux);
@@ -173,6 +203,25 @@ $(document).ready(function(){
         });
         
         console.info(filtros);
+    });
+    
+    $("#pintar_resultados").on("click","button.btn-text",function(){
+        let text = $(this).text();
+        let val = $("input",$(this).parents("div.panel_condiciones")).val() + text;
+        $("input",$(this).parents("div.panel_condiciones")).val(val);
+    }).on("click","button.add_fm", function(){
+        let val = $(this).siblings("input").val();
+        
+//        if(/^.{3,4,7}$/.test(val)){
+            $("input[data-role='tagsinput']",$(this).parents("div.prgt_abrt")).tagsinput("add",val);
+//        }
+
+    }).on("click","button.clean_fm", function(){
+        $(this).siblings("input").val("");
+    });
+    
+    $("#pintar_resultados").on("keyup","input.inp_condiciones", function(){
+//        $(this).val($(this).val().replace(/[^0-9\.]/g,''));
     });
     
 });
@@ -217,45 +266,37 @@ function obtenerCriterios(encuesta) {
 function pintarResultados(result){
     let div_prncpl = $("#pintar_resultados");
     let div_card;
+    let length_case;
     let tamanno = Object.keys(result).length;
     div_prncpl.empty();
     console.info(result);
     if(tamanno > 0){
         $.each(result,function(key,item){
+            length_case = Object.keys(item).length;
             $.each(item ,function(ky, itm){
                 if(ky === "pregunta"){
                     div_card = $("<div class='card mb-3'>").append($("<div class='card-header'>").append(crearHtmlDescripcionPregunta(itm))).append($("<div class='card-body'>"));
-                    
                 }
                 
-                if(Object.keys(item).length === 2){
-                    if(ky === "abierta"){
-                        $("div.card-body",div_card).append(crearHtmlAbierta(itm,0));
-                    }
+                switch(length_case){
+                    case 2:
+                        if(ky === "cerradauv"){
+                            $("div.card-body",div_card).append(crearHtmlCerradaMOUV(itm,0,""));
+                        }
 
-                    if(ky === "cerradauv"){
-                        $("div.card-body",div_card).append(crearHtmlCerradaMOUV(itm,0,""));
-                    }
-                    
-                    if(ky === "cerradavv"){
-                       $("div.card-body",div_card).append(crearHtmlCerradaMOVV(itm,0,""));
-                    }
-                    
-                    if(ky === "cerradaLista"){
-                        $("div.card-body",div_card).append(crearHtmlCerradaLista(itm,0,""));
-                    }
-                }else{
-                    if(ky === "cerradauv" && item["abierta"] !== undefined){
-                        $("div.card-body",div_card).append(crearHtmlCerradaMOUV(item,1,""));
-                    }
-                    
-                    if(ky === "cerradavv"){
-                        
-                    }
-                    
-                    if(ky === "cerradaLista"){
-//                        $("div.card-body",div_card).append(crearHtmlCerradaLista(itm,0,""));
-                    }
+                        if(ky === "cerradavv"){
+                           $("div.card-body",div_card).append(crearHtmlCerradaMOVV(itm,0,""));
+                        }
+
+                        if(ky === "cerradaLista"){
+                            $("div.card-body",div_card).append(crearHtmlCerradaLista(itm,0,""));
+                        }
+                        break;
+                    case 3:
+                        if(ky === "abierta"){
+                            $("div.card-body",div_card).append(crearHtmlAbierta(item,0));
+                        }
+                        break;
                 }
             });
             $(div_prncpl).append($(div_card));  
@@ -267,13 +308,13 @@ function pintarResultados(result){
 // ********************************* Tipos de pregunta **************************
 
 function crearPanelCondiciones(tipo){
-    let panel = $("<div>");
+    let panel = $("<div class='row align-items-center panel_condiciones'>");
     switch(tipo){
         case 0:
-            
+            $(panel).append($("<div class='col-auto'>").append($("<label>").text("Condiciones")).append($("<input type='text' class='form-control form-control-sm inp_condiciones'>")).append($("<div class='w-100 mb-2'>")).append($("<button type='button' class='btn btn-sm btn-success add_fm' style='margin-right: 5px !important;'>").append("<i class='fas fa-plus'></i>")).append($("<button type='button' class='btn btn-sm btn-danger clean_fm'>").append("<i class='fas fa-trash-alt'></i>"))).append($("<div class='col-auto'>").append($("<div>").append($("<button type='button' style='margin: 3px !important;' class='btn btn-success btn-text'>").text("X")).append($("<button class='btn-secondary btn btn-text' style='padding-right: 9.725px !important; padding-left: 9.725px !important; margin: 3px !important;'>").text("!=")).append($("<button class='btn-secondary btn btn-text' style='margin: 3px !important;'>").text("<")).append($("<div class='w-100'>")).append($("<button class='btn-secondary btn btn-text' style='margin: 3px !important;'>").text(">")).append($("<button class='btn-secondary btn btn-text' style='margin: 3px !important; padding-right: 6.525px !important; padding-left: 6.525px !important;'>").text("<=")).append($("<button class='btn-secondary btn btn-text' style='padding-right: 6.525px !important; padding-left: 6.525px !important; margin: 3px !important;' >").text(">="))));
             break;
-                    
     }
+    return panel;
 }
 
 function crearHtmlAbierta(contenido,tipo){
@@ -282,15 +323,17 @@ function crearHtmlAbierta(contenido,tipo){
     switch(tipo){
         case 0:
             $("div.row",contenedor).addClass("abiertaS");
-            $.each(contenido,function(i, item){
+            $.each(contenido.abierta,function(i, item){
                 $.each(item,function(x,itm){
-                    texto = itm.replace(":","");
-                    $("div.row",contenedor).append($("<div class = 'col-md-4'>").append($("<label>").text(texto)).append($("<input type='text' class='form-control'>")));   
+                    texto = itm;
+                    $("div.row",contenedor).append($("<div class = 'col-md-4'>").append($("<label class='descripcion'>").text(texto)).append($("<input type='text' class='form-control' data-role='tagsinput'>"))).append($("<div class = 'col-auto panel'>"));
                 });  
-            });
-            
+            }); //.append(crearPanelCondiciones(0))
+            $("div.panel",contenedor).append(crearPanelCondiciones(0));
+//            console.info($(crearPanelCondiciones(0)).html());
             break;
     }
+    initSelectPicker($("input[data-role=tagsinput]",contenedor),1);
     return contenedor;
 }
 
@@ -302,71 +345,76 @@ function crearHtmlCerradaLista(contenido,tipo, descripcion){
         case 0:
             contenedor.addClass("crrdListaS");
             $.each(contenido,function(i, item){
-                check_row = $("<div class='row'>");
+                check_row = $("<div class='row opcnsC'>");
                 if(item[0] !== ""){
-                    check_row.append($("<div class='col-md-12'>").append($("<div class='row'>").append($("<div class='col-auto'>").append($("<label>").text(item[0])))));
+                    check_row.append($("<div class='col-md-12'>").append($("<div class='row'>").append($("<div class='col-auto'>").append($("<label class='descripcion'>").text(item[0])))));
                 }
                 
                 if(i + 1 < contenido.length){
                     check_row.addClass("mb-3");
                 }
+                
                 if(item.length === 3){
                     if((item[2] === "Si" || item[1] === "Si") && (item [1] === "No" || item[2] === "No")){
                         auxClass = "check_sn";
                     }
                 }
+                
                 $.each(item, function(x,itm){
                     if(x > 0){
-                        check_row.append($("<div class='col-auto "+auxClass+"'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox' class='cerradaLista_"+x+"'>").append($("<label class='form-check-label'>").text(itm))));  
-                    }else{
-                        
+                        check_row.append($("<div class='col-auto "+auxClass+"'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox'>").append($("<label class='form-check-label'>").text(itm))));                          
                     }
                 });
                 contenedor.append(check_row);
             });
             break;
     }
-    contenedor.append(check_row);
     return contenedor;
 }
 
 function crearHtmlCerradaMOUV(contenido,tipo, descripcion){
     let contenedor = $("<div>").addClass("prgt_cMOUV");
-    let check_row = $("<div class='row'>");
+    let check_row;
     let auxClass = "";
     let abiertaCheck = "";
     switch(tipo){
         case 0:
-            check_row.addClass("mouvS");
+            contenedor.addClass("mouvS");
             $.each(contenido,function(i, item){
+                check_row = $("<div class='row opcnsC'>");
+                
+                if(i + 1 < contenido.length){
+                    check_row.addClass("mb-3");
+                }
                 if(item.length === 2){
-                    if((item[0] === "Si" || item[1] === "Si") && (item [0] === "No" || item[1] === "No")){
+                    if((item[0] === "Si" || item[1] === "Si") && (item [1] === "No" || item[0] === "No")){
                         auxClass = "check_sn";
                     }
                 }
                 $.each(item, function(x,itm){
-                    check_row.append($("<div class='col-auto "+auxClass+"'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox' class='cerradaMOUV_"+x+"'>").append($("<label class='form-check-label'>").text(itm))));  
+                    check_row.append($("<div class='col-auto "+auxClass+"'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox'>").append($("<label class='form-check-label'>").text(itm))));  
                 });
+                contenedor.append(check_row);
             });
             break;
         case 1:
-            let texto = "";
-            abiertaCheck = $("<div class='col-auto'>").append($("<div class='row'>").append($("<div class='col-auto pr-0'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox' class='cerradaMOUVA'>").append($("<label class='form-check-label'>")))).append($("<div class='col-auto p-0'>").append($("<input type='text' class='form-control form-control-sm'>"))));
-            $.each(contenido["cerradauv"][0],function(i, item){
-                if(/\bOtro\b/i.test(item)){
-                    texto = item;
-                }else{
-                    check_row.append($("<div class='col-auto'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox' class='cerradaMOUVA_"+i+"'>").append($("<label class='form-check-label'>").text(item))));  
-                }
-            });
-            if(texto === ""){
-                texto = contenido["abierta"][0];  
-            }
-            $("label.form-check-label",abiertaCheck).text(texto);
-            check_row.append(abiertaCheck);
+//            let texto = "";
+//            abiertaCheck = $("<div class='col-auto'>").append($("<div class='row'>").append($("<div class='col-auto pr-0'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox' class='cerradaMOUVA'>").append($("<label class='form-check-label'>")))).append($("<div class='col-auto p-0'>").append($("<input type='text' class='form-control form-control-sm'>"))));
+//            $.each(contenido["cerradauv"][0],function(i, item){
+//                if(/\bOtro\b/i.test(item)){
+//                    texto = item;
+//                }else{
+//                    check_row.append($("<div class='col-auto'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox' class='cerradaMOUVA_"+i+"'>").append($("<label class='form-check-label'>").text(item))));  
+//                }
+//            });
+//            if(texto === ""){
+//                texto = contenido["abierta"][0];  
+//            }
+//            $("label.form-check-label",abiertaCheck).text(texto);
+//            check_row.append(abiertaCheck);
             break;
     }
-    contenedor.append(check_row);
+    
     return contenedor;
 }
 
@@ -383,3 +431,12 @@ function crearHtmlDescripcionPregunta(descripcion){
 }
 
 // *******************************************************************************
+
+function initSelectPicker(element,tipo){ // 1:abierta, 2:multiple
+    $(element).tagsinput({
+        tagClass: function(item) {
+          return 'btn btn-info btn-lg color-tags';
+        },
+        maxTags: 10
+    });
+}
