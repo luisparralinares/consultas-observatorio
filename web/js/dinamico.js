@@ -86,14 +86,6 @@ $(document).ready(function(){
         }
     });
     
-    $("#pintar_resultados").on("change","div.check_sn",function(){
-        let active = $("input[type=checkbox]",this).is(":checked");
-        $("input[type=checkbox]",$(this).parent()).prop("checked",false);
-        if(active){
-            $("input[type=checkbox]",this).prop("checked",true);
-        }
-    });
-    
     $("#search_questions").click(function(){
         let descripcion_prgts = {};
         if(Object.keys(prgts_slccnds).length > 0){
@@ -127,10 +119,12 @@ $(document).ready(function(){
         let filtros = {};
         let aux = {};
         let opciones = [];
-        filtros["mouv"] = {ind: []};
+        filtros["mouv"] = {ind: [], abi: []};
         filtros["cerradaLista"] = {ind: []};
         filtros["abierta"] = {ind: []};
         
+        
+//        MOUV
         $(".mouvS").each(function(i, item){
             aux = {};
             
@@ -155,6 +149,40 @@ $(document).ready(function(){
                 filtros.mouv.ind.push(aux);
             }
         });
+        
+        $(".mouvA").each(function(i, item){
+            aux = {};
+            
+            if($("div.opcnsC",item).length > 0){
+                aux["listas"] = [];
+            }
+            
+            $("div.opcnsC",item).each(function(x, itm){
+                if($("input[type=checkbox]:checked",itm).length > 0){
+                    opciones = [];
+                   $("input[type=checkbox]:checked",itm).each(function(y, im){
+                       
+                        if($(im).hasClass("abierta")){
+                            if($("input[data-role=tagsinput]",$(im).parents("div.opc_abierta")).val() !== ""){
+                                aux["abierta"] = $("input[data-role=tagsinput]",$(im).parents("div.opc_abierta")).val().split(",");
+                            }
+                        }else{
+                            opciones.push($(im).siblings("label").text());
+                        }
+                    });
+                    if(opciones.length > 0){
+                        aux["listas"].push({opciones: opciones});
+                    }
+                }
+            });
+
+            if(Object.keys(aux).length > 0 && (aux.listas.length > 0 || aux.abierta !== undefined)){
+                aux["descripcion"] = $(".descripcionP",$(item).parents("div.card").children("div.card-header")).text();
+                filtros.mouv.abi.push(aux);
+            }
+        });
+        
+// *****************************************************************************        
         
         $(".crrdListaS").each(function(i, item){
             aux = {};
@@ -205,23 +233,33 @@ $(document).ready(function(){
         console.info(filtros);
     });
     
-    $("#pintar_resultados").on("click","button.btn-text",function(){
+    $("#pintar_resultados").on("click","button.add_panel",function(){
+        if($("div.panel_condiciones",$(this).parent().siblings("div.col-auto")).length){
+            $("div.panel_condiciones",$(this).parent().siblings("div.col-auto")).parent().remove();
+        }else{
+            $($("<div class='col-auto'>").append(crearPanelCondiciones(0))).insertAfter($(this).parent());
+        }
+    }).on("click","button.btn-text",function(){
         let text = $(this).text();
         let val = $("input",$(this).parents("div.panel_condiciones")).val() + text;
         $("input",$(this).parents("div.panel_condiciones")).val(val);
     }).on("click","button.add_fm", function(){
         let val = $(this).siblings("input").val();
-        
+//        console.info($(this).parents("div.panel_condiciones").parent().siblings("div").find("input[data-role=tagsinput]").html());
 //        if(/^.{3,4,7}$/.test(val)){
-            $("input[data-role='tagsinput']",$(this).parents("div.prgt_abrt")).tagsinput("add",val);
+            $(this).parents("div.panel_condiciones").parent().siblings("div").find("input[data-role=tagsinput]").tagsinput("add",val);
+            $(this).parents("div.panel_condiciones").parent().siblings("div").find();
 //        }
-
     }).on("click","button.clean_fm", function(){
         $(this).siblings("input").val("");
-    });
-    
-    $("#pintar_resultados").on("keyup","input.inp_condiciones", function(){
+    }).on("keyup","input.inp_condiciones", function(){
 //        $(this).val($(this).val().replace(/[^0-9\.]/g,''));
+    }).on("change","div.check_sn",function(){
+        let active = $("input[type=checkbox]",this).is(":checked");
+        $("input[type=checkbox]",$(this).parent()).prop("checked",false);
+        if(active){
+            $("input[type=checkbox]",this).prop("checked",true);
+        }
     });
     
 });
@@ -297,6 +335,14 @@ function pintarResultados(result){
                             $("div.card-body",div_card).append(crearHtmlAbierta(item,0));
                         }
                         break;
+                    case 4:
+                        if(ky === "cerradauv" && item["abierta"] !== undefined){
+                            $("div.card-body",div_card).append(crearHtmlCerradaMOUV(item,1,""));
+                        }
+                        if(ky === "cerradaLista" && item["abierta"] !== undefined){
+//                            $("div.card-body",div_card).append(crearHtmlCerradaMOUV(item,1,""));
+                        }
+                        break;
                 }
             });
             $(div_prncpl).append($(div_card));  
@@ -318,22 +364,74 @@ function crearPanelCondiciones(tipo){
 }
 
 function crearHtmlAbierta(contenido,tipo){
-    let contenedor = $("<div>").addClass("prgt_abrt").append($("<div class='row'>"));
+    let contenedor = $("<div class='row'>");
     let texto = "";
     switch(tipo){
         case 0:
-            $("div.row",contenedor).addClass("abiertaS");
+            $("div.row",contenedor).addClass("abiertaS prgt_abrt");
             $.each(contenido.abierta,function(i, item){
                 $.each(item,function(x,itm){
                     texto = itm;
-                    $("div.row",contenedor).append($("<div class = 'col-md-4'>").append($("<label class='descripcion'>").text(texto)).append($("<input type='text' class='form-control' data-role='tagsinput'>"))).append($("<div class = 'col-auto panel'>"));
+                    $(contenedor).append($("<div class = 'col-md-4'>").append($("<label class='descripcion'>").text(texto)).append($("<input type='text' class='form-control' data-role='tagsinput'>")).append("<div class='w-100 mb-2'>").append($("<button class='btn btn-info btn-sm add_panel' style='margin-right: 5px !important;'>").append("<i class='fas fa-plus'>")));
                 });  
-            }); //.append(crearPanelCondiciones(0))
-            $("div.panel",contenedor).append(crearPanelCondiciones(0));
-//            console.info($(crearPanelCondiciones(0)).html());
+            }); 
             break;
+        case 2:
+            $(contenedor).addClass("opc_abierta");
+            $(contenedor).append($("<div class='col-auto pr-0'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox' class='abierta'>").append($("<label class='form-check-label'>").text(contenido)))).append($("<div class='col-auto pl-0'>").append($("<input type='text' class='form-control' data-role='tagsinput'>")));
+            break;
+            
     }
     initSelectPicker($("input[data-role=tagsinput]",contenedor),1);
+    return contenedor;
+}
+
+function crearHtmlCerradaMOUV(contenido,tipo, descripcion){
+    let contenedor = $("<div>").addClass("prgt_cMOUV");
+    let check_row;
+    let auxClass = "";
+    let abiertaCheck = "";
+    switch(tipo){
+        case 0:
+            contenedor.addClass("mouvS");
+            $.each(contenido,function(i, item){
+                check_row = $("<div class='row opcnsC'>");
+                
+                if(i + 1 < contenido.length){
+                    check_row.addClass("mb-3");
+                }
+                if(item.length === 2){
+                    if((item[0] === "Si" || item[1] === "Si") && (item [1] === "No" || item[0] === "No")){
+                        auxClass = "check_sn";
+                    }
+                }
+                $.each(item, function(x,itm){
+                    check_row.append($("<div class='col-auto "+auxClass+"'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox'>").append($("<label class='form-check-label'>").text(itm))));  
+                });
+                contenedor.append(check_row);
+            });
+            break;
+        case 1:
+            let texto = "";
+            contenedor.addClass("mouvA");
+            check_row = $("<div class='row opcnsC'>");
+            $.each(contenido["cerradauv"][0],function(i, item){
+                if(/\bOtro\b/i.test(item)){
+                    texto = item;
+                }else{
+                    check_row.append($("<div class='col-auto'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox'>").append($("<label class='form-check-label'>").text(item))));  
+                }
+            });
+//            console.info(contenido["abierta"][0]);
+            if(texto === ""){
+                texto = contenido["abierta"][0];  
+            }
+            abiertaCheck = $("<div class='col-auto'>").append(crearHtmlAbierta(texto, 2));
+            check_row.append(abiertaCheck);
+            contenedor.append(check_row);
+            break;
+    }
+    
     return contenedor;
 }
 
@@ -368,58 +466,33 @@ function crearHtmlCerradaLista(contenido,tipo, descripcion){
                 contenedor.append(check_row);
             });
             break;
+        case 1:
+            let texto = "";
+            contenedor.addClass("mouvA");
+            check_row = $("<div class='row opcnsC'>");
+            $.each(contenido["cerradauv"][0],function(i, item){
+                if(/\bOtro\b/i.test(item)){
+                    texto = item;
+                }else{
+                    check_row.append($("<div class='col-auto'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox'>").append($("<label class='form-check-label'>").text(item))));  
+                }
+            });
+            console.info(contenido["abierta"][0]);
+            if(texto === ""){
+                texto = contenido["abierta"][0];  
+            }
+            abiertaCheck = $("<div class='col-auto'>").append(crearHtmlAbierta(texto, 2));
+            check_row.append(abiertaCheck);
+            contenedor.append(check_row);
+            break;
     }
     return contenedor;
 }
 
-function crearHtmlCerradaMOUV(contenido,tipo, descripcion){
-    let contenedor = $("<div>").addClass("prgt_cMOUV");
-    let check_row;
-    let auxClass = "";
-    let abiertaCheck = "";
-    switch(tipo){
-        case 0:
-            contenedor.addClass("mouvS");
-            $.each(contenido,function(i, item){
-                check_row = $("<div class='row opcnsC'>");
-                
-                if(i + 1 < contenido.length){
-                    check_row.addClass("mb-3");
-                }
-                if(item.length === 2){
-                    if((item[0] === "Si" || item[1] === "Si") && (item [1] === "No" || item[0] === "No")){
-                        auxClass = "check_sn";
-                    }
-                }
-                $.each(item, function(x,itm){
-                    check_row.append($("<div class='col-auto "+auxClass+"'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox'>").append($("<label class='form-check-label'>").text(itm))));  
-                });
-                contenedor.append(check_row);
-            });
-            break;
-        case 1:
-//            let texto = "";
-//            abiertaCheck = $("<div class='col-auto'>").append($("<div class='row'>").append($("<div class='col-auto pr-0'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox' class='cerradaMOUVA'>").append($("<label class='form-check-label'>")))).append($("<div class='col-auto p-0'>").append($("<input type='text' class='form-control form-control-sm'>"))));
-//            $.each(contenido["cerradauv"][0],function(i, item){
-//                if(/\bOtro\b/i.test(item)){
-//                    texto = item;
-//                }else{
-//                    check_row.append($("<div class='col-auto'>").append($('<div class="form-check form-check-inline">').append("<input type='checkbox' class='cerradaMOUVA_"+i+"'>").append($("<label class='form-check-label'>").text(item))));  
-//                }
-//            });
-//            if(texto === ""){
-//                texto = contenido["abierta"][0];  
-//            }
-//            $("label.form-check-label",abiertaCheck).text(texto);
-//            check_row.append(abiertaCheck);
-            break;
-    }
-    
-    return contenedor;
-}
+
 
 function crearHtmlCerradaMOVV(lista, index){
-    let contenedor = $("<div>").addClass("prgt_cMOUV");
+    let contenedor = $("<div>").addClass("prgt_cMOVV");
     let check_row = $("<div class='row'>");
     
     return contenedor;
